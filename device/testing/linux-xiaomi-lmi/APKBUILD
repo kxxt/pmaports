@@ -1,0 +1,73 @@
+# Reference: <https://postmarketos.org/vendorkernel>
+# Kernel config based on: arch/arm64/configs/(CHANGEME!)
+
+pkgname=linux-xiaomi-lmi
+pkgver=4.19.282
+pkgrel=15
+pkgdesc="Xiaomi POCO F2 Pro kernel fork"
+arch="aarch64"
+_carch="arm64"
+_flavor="xiaomi-lmi"
+url="https://kernel.org"
+license="GPL-2.0-only"
+options="!strip !check !tracedeps pmb:cross-native"
+makedepends="
+	bash
+	bc
+	bison
+	devicepkg-dev
+	findutils
+	flex
+	openssl-dev
+	perl
+	clang
+	xz
+	linux-headers
+"
+CC=clang
+HOSTCC=clang
+
+# Source
+_repository="android_kernel_xiaomi_sm8250"
+_commit="b2840744e714502d0e98d9c1d97cf8ebf3f5169d"
+_config="config-$_flavor.$arch"
+source="
+	$pkgname-$_commit.tar.gz::https://github.com/LineageOS/$_repository/archive/$_commit.tar.gz
+	$_config
+	0001-comment-out-mgeneral-regs-only-flag.patch
+	do-not-skip-initramfs.patch
+	remove-bootloader-cmdline-opts.patch
+"
+builddir="$srcdir/$_repository-$_commit"
+_outdir="out"
+
+prepare() {
+	default_prepare
+	REPLACE_GCCH=0 . downstreamkernel_prepare
+	# rm -rf techpack/camera # Kernel Panic caused by camera driver
+	sed -i '/techpack\/camera/d' techpack/Kbuild
+}
+
+build() {
+	unset LDFLAGS
+	make O="$_outdir" ARCH="$_carch" CC="${CC:-gcc}" \
+		KBUILD_BUILD_VERSION="$((pkgrel + 1 ))-postmarketOS"
+}
+
+package() {
+	downstreamkernel_package "$builddir" "$pkgdir" "$_carch" \
+		"$_flavor" "$_outdir"
+
+	mkdir -p "$pkgdir"/boot/dtbs/qcom
+	cp "$_outdir"/arch/arm64/boot/dts/vendor/qcom/*.dtb "$pkgdir"/boot/dtbs/qcom
+	cp "$_outdir"/arch/arm64/boot/dts/vendor/qcom/*.dtbo "$pkgdir"/boot/dtbs/qcom
+}
+
+sha512sums="
+fd1cadecbc6c3bc6d5b4d4285876ee2c7b2d0b572657e8b8c5310b4515deb1cce6d8a7906f5aa038222dc26c5f20a47651dd584d18ab1c7be1fec3bab342d6b8  linux-xiaomi-lmi-b2840744e714502d0e98d9c1d97cf8ebf3f5169d.tar.gz
+bec28aa4dd8d556388e12dbb9b75163761f9d8a32831b590e31b29706293064a9a4cdec49104aa1fe39c4534105085731e45b29d76a2aa55c75f1cd203992ffa  config-xiaomi-lmi.aarch64
+bbd3790b58b1f0c28bac25cd50533fa9bb60d5727480ee3ff0063fbcc83c1b188d820cd7de736ca6bb67821b76071f54c46e5e5292a79e744af122bdc1a17ac0  0001-comment-out-mgeneral-regs-only-flag.patch
+d438c9effd15c203d50f881a86db6fdc9436e1b3cb79420903494a9c3feeea5f6df16f5467bd39fcbbe410790fa96fa6b2e262c0c21bac9b9e8e5bd1fc777d21  dump_stack.patch
+4727cdcdaa03c8df62d5e26930baa036d43363b5d1b7f43059fbd361c463a09fc7957cca357ef1e9ad7488647e00fc5656fdbc4d209010cc85b8d2c98268ae6d  do-not-skip-initramfs.patch
+fa588b12edd5dd9312a21dff7cbf2089ca8a250952a657435ec02e4a3aaecb5c46645981ec265944a2e5ef43edc26a959d695c28930894649341a1bcc43a841f  remove-bootloader-cmdline-opts.patch
+"

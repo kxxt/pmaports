@@ -1,0 +1,13 @@
+diff --git a/drivers/soc/qcom/msm_bus/msm_bus_arb_rpmh.c b/drivers/soc/qcom/msm_bus/msm_bus_arb_rpmh.c
+index 801be4315736..b1722f82d25b 100644
+--- a/drivers/soc/qcom/msm_bus/msm_bus_arb_rpmh.c
++++ b/drivers/soc/qcom/msm_bus/msm_bus_arb_rpmh.c
+@@ -1218,6 +1218,8 @@ static uint32_t register_client_adhoc(struct msm_bus_scale_pdata *pdata)
+ 	struct device *dev;
+ 	uint32_t handle = 0;
+ 
++	dump_stack();
++
+ 	rt_mutex_lock(&msm_bus_adhoc_lock);
+ 	client = kzalloc(sizeof(struct msm_bus_client), GFP_KERNEL);
+ 	if (!client) {
